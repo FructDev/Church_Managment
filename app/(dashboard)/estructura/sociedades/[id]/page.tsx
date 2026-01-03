@@ -25,23 +25,57 @@ async function getCargosDirectivaEnum(): Promise<string[]> {
 
 import { ROLES_ADMINISTRATIVOS } from "@/lib/auth/roles";
 
+import {
+  getCajaPorSociedadId,
+  getCajaChicaDetalle,
+  getMovimientosCajaChica,
+  getCajasChicas,
+} from "@/actions/finanzas/cajaChicaActions";
+import { getCuentasBancarias } from "@/actions/finanzas/cuentasBancariasActions";
+
+// ... (existing imports)
+
 export default async function SociedadDetallePage(props: {
   params: Promise<{ id: string }>;
 }) {
   const { id } = await props.params;
   const { profile } = await getSessionInfo();
 
-  // Carga de datos masiva
+  // 1. Datos básicos
   const [sociedad, directiva, dashboardData, miembros, cargosEnum] =
     await Promise.all([
       getSociedadDetalle(id),
       getDirectiva(id),
-      getSociedadDashboard(id), // Datos para las nuevas pestañas
+      getSociedadDashboard(id),
       getMiembrosActivos(),
       getCargosDirectivaEnum(),
     ]);
 
   if (!sociedad) notFound();
+
+  // 2. Datos Financieros
+  const sociedadCajaId = await getCajaPorSociedadId(id);
+
+  let cajaChica = null;
+  let movimientos: any[] = [];
+
+  if (sociedadCajaId) {
+    [cajaChica, movimientos] = await Promise.all([
+      getCajaChicaDetalle(sociedadCajaId),
+      getMovimientosCajaChica(sociedadCajaId)
+    ]);
+  }
+
+  const [cuentasBancarias, todasCajas] = await Promise.all([
+    getCuentasBancarias(),
+    getCajasChicas()
+  ]);
+
+  const otrasCajas = todasCajas
+    .filter(c => c.id !== sociedadCajaId)
+    .map(c => ({ id: c.id, nombre: c.nombre }));
+
+  const cuentasSimples = cuentasBancarias.map(c => ({ id: c.id, nombre: c.nombre }));
 
   const canManage =
     ROLES_ADMINISTRATIVOS.includes(profile?.rol as any) ||
@@ -58,6 +92,11 @@ export default async function SociedadDetallePage(props: {
 
       <SociedadDashboardTabs
         data={dashboardData}
+        cajaChica={cajaChica}
+        movimientos={movimientos}
+        cuentasBancarias={cuentasSimples}
+        otrasCajas={otrasCajas}
+        canManageFinanzas={!!cajaChica}
         // Pasamos la tabla de directiva como "children" para la 3ra pestaña
         childrenDirectiva={
           <div className="space-y-4">
@@ -86,6 +125,7 @@ export default async function SociedadDetallePage(props: {
           </div>
         }
       />
-    </div>
+
+    </div >
   );
 }

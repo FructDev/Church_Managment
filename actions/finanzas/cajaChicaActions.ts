@@ -4,8 +4,8 @@
 "use server";
 
 import { checkPermission } from "@/lib/auth/guards";
-import { ROLES_FINANCIEROS } from "@/lib/auth/roles";
-import { createClient } from "@/lib/supabase/server";
+import { ROLES_FINANCIEROS, ROLES_LIDERAZGO_SOCIEDAD, ROLES_ADMINISTRATIVOS } from "@/lib/auth/roles";
+import { createClient, createAdminClient } from "@/lib/supabase/server";
 import {
   cajaChicaSchema,
   FondoTransferFormValues,
@@ -41,13 +41,46 @@ export type MovimientoCajaChicaConDetalle =
   };
 
 /**
+ * Obtiene la caja chica asociada a una sociedad.
+ * Busca una caja cuyo nombre contenga el nombre de la sociedad.
+ */
+export async function getCajaPorSociedadId(sociedadId: string): Promise<string | null> {
+  const supabase = await createClient();
+
+  // 1. Obtener nombre de la sociedad
+  const { data: sociedad } = await supabase
+    .from("sociedades")
+    .select("nombre")
+    .eq("id", sociedadId)
+    .single();
+
+  if (!sociedad) return null;
+
+  // 2. Buscar caja que contenga el nombre (insensible a mayúsculas)
+  const { data: caja } = await supabase
+    .from("caja_chica")
+    .select("id")
+    .ilike("nombre", `%${sociedad.nombre}%`)
+    .single();
+
+  return caja ? caja.id : null;
+}
+
+/**
  * Obtiene todas las cajas chicas.
  */
 export async function getCajasChicas(): Promise<CajaChicaConResponsable[]> {
-  await checkPermission(ROLES_FINANCIEROS);
-  const supabase = await createClient();
+  const { user, profile } = await getSessionInfo();
 
-  const { data, error } = await supabase
+  const isFinanciero = ROLES_FINANCIEROS.includes(profile?.rol as any);
+  const isLiderSociedad = ROLES_LIDERAZGO_SOCIEDAD.includes(profile?.rol as any);
+
+  if (!user || (!isFinanciero && !isLiderSociedad)) {
+    return [];
+  }
+
+  const supabase = await createClient();
+  let query = supabase
     .from("caja_chica")
     .select(
       `
@@ -63,6 +96,23 @@ export async function getCajasChicas(): Promise<CajaChicaConResponsable[]> {
     .order("estado", { ascending: true })
     .order("periodo_inicio", { ascending: false });
 
+  // Si es líder de sociedad, filtramos por su sociedad
+  if (!isFinanciero && isLiderSociedad && profile?.sociedad_id) {
+    const { data: sociedad } = await supabase
+      .from("sociedades")
+      .select("nombre")
+      .eq("id", profile.sociedad_id)
+      .single();
+
+    if (sociedad) {
+      query = query.ilike("nombre", `%${sociedad.nombre}%`);
+    } else {
+      return [];
+    }
+  }
+
+  const { data, error } = await query;
+
   if (error) {
     console.error("Error al obtener cajas chicas:", error.message);
     return [];
@@ -75,13 +125,77 @@ export async function getCajasChicas(): Promise<CajaChicaConResponsable[]> {
 }
 
 /**
+ * Obtiene opciones simples de cajas (ID y Nombre) para selectores.
+ * Accesible para roles administrativos que necesitan registrar ingresos.
+ */
+export async function getCajasOptions(): Promise<{ id: string; nombre: string | null }[]> {
+  const { user, profile } = await getSessionInfo();
+
+  // Permitimos a administrativos (para gestionar cultos) y financieros
+  const canAccess =
+    ROLES_FINANCIEROS.includes(profile?.rol as any) ||
+    ROLES_ADMINISTRATIVOS.includes(profile?.rol as any) ||
+    ROLES_LIDERAZGO_SOCIEDAD.includes(profile?.rol as any);
+
+  if (!user || !canAccess) {
+    return [];
+  }
+
+  console.log("getCajasOptions - User Role:", profile?.rol);
+  console.log("getCajasOptions - Can Access:", canAccess);
+
+  // Usamos admin client para saltar RLS en este listado
+  const supabase = await createAdminClient();
+  const { data, error } = await supabase
+    .from("caja_chica")
+    .select("id, nombre")
+    .eq("estado", "activo") // Solo cajas activas
+    .order("nombre");
+
+  if (error) {
+    console.error("Error al obtener opciones de cajas:", error.message);
+    return [];
+  }
+
+  console.log("getCajasOptions - Data found:", data?.length);
+  return data;
+}
+
+/**
  * Obtiene los detalles de UNA caja chica.
  */
 export async function getCajaChicaDetalle(
   id: string
 ): Promise<CajaChicaConResponsable | null> {
-  await checkPermission(ROLES_FINANCIEROS);
+  const { user, profile } = await getSessionInfo();
+  const isFinanciero = ROLES_FINANCIEROS.includes(profile?.rol as any);
+  const isLiderSociedad = ROLES_LIDERAZGO_SOCIEDAD.includes(profile?.rol as any);
+
+  if (!user || (!isFinanciero && !isLiderSociedad)) {
+    return null;
+  }
+
   const supabase = await createClient();
+
+  // Si es líder, verificamos que sea SU caja
+  if (!isFinanciero && isLiderSociedad && profile?.sociedad_id) {
+    const { data: sociedad } = await supabase
+      .from("sociedades")
+      .select("nombre")
+      .eq("id", profile.sociedad_id)
+      .single();
+
+    // Verificamos si la caja solicitada corresponde a su sociedad
+    const { data: cajaCheck } = await supabase
+      .from("caja_chica")
+      .select("nombre")
+      .eq("id", id)
+      .single();
+
+    if (!sociedad || !cajaCheck || !cajaCheck.nombre?.toLowerCase().includes(sociedad.nombre.toLowerCase())) {
+      return null; // No tiene permiso para ver esta caja
+    }
+  }
 
   const { data, error } = await supabase
     .from("caja_chica")
@@ -112,8 +226,34 @@ export async function getCajaChicaDetalle(
 export async function getMovimientosCajaChica(
   cajaChicaId: string
 ): Promise<MovimientoCajaChicaConDetalle[]> {
-  await checkPermission(ROLES_FINANCIEROS);
+  const { user, profile } = await getSessionInfo();
+  const isFinanciero = ROLES_FINANCIEROS.includes(profile?.rol as any);
+  const isLiderSociedad = ROLES_LIDERAZGO_SOCIEDAD.includes(profile?.rol as any);
+
+  if (!user || (!isFinanciero && !isLiderSociedad)) {
+    return [];
+  }
+
   const supabase = await createClient();
+
+  // Validación de seguridad para líderes
+  if (!isFinanciero && isLiderSociedad && profile?.sociedad_id) {
+    const { data: sociedad } = await supabase
+      .from("sociedades")
+      .select("nombre")
+      .eq("id", profile.sociedad_id)
+      .single();
+
+    const { data: cajaCheck } = await supabase
+      .from("caja_chica")
+      .select("nombre")
+      .eq("id", cajaChicaId)
+      .single();
+
+    if (!sociedad || !cajaCheck || !cajaCheck.nombre?.toLowerCase().includes(sociedad.nombre.toLowerCase())) {
+      return [];
+    }
+  }
 
   const { data, error } = await supabase
     .from("movimientos_caja_chica")
@@ -171,11 +311,10 @@ export async function addMovimientoCajaChica(
   data: MovimientoCajaChicaFormValues
 ) {
   const { user, profile } = await getSessionInfo();
-  if (
-    !user ||
-    !profile ||
-    !ROLES_FINANCIEROS.includes(profile.rol as any)
-  ) {
+  const isFinanciero = ROLES_FINANCIEROS.includes(profile?.rol as any);
+  const isLiderSociedad = ROLES_LIDERAZGO_SOCIEDAD.includes(profile?.rol as any);
+
+  if (!user || !profile || (!isFinanciero && !isLiderSociedad)) {
     return { success: false, message: "No tiene permisos." };
   }
 
@@ -194,6 +333,25 @@ export async function addMovimientoCajaChica(
     cuenta_destino_id,
     caja_destino_id,
   } = validatedFields.data;
+
+  // VALIDACIÓN EXTRA PARA LÍDERES DE SOCIEDAD
+  if (!isFinanciero && isLiderSociedad && profile.sociedad_id) {
+    const { data: sociedad } = await supabase
+      .from("sociedades")
+      .select("nombre")
+      .eq("id", profile.sociedad_id)
+      .single();
+
+    const { data: cajaCheck } = await supabase
+      .from("caja_chica")
+      .select("nombre")
+      .eq("id", caja_chica_id)
+      .single();
+
+    if (!sociedad || !cajaCheck || !cajaCheck.nombre?.toLowerCase().includes(sociedad.nombre.toLowerCase())) {
+      return { success: false, message: "No tiene permiso para operar esta caja." };
+    }
+  }
 
   // 1. VALIDACIÓN DE SALDO DE ORIGEN
   // Si el dinero SALE de la caja (gasto, deposito o transferencia), verificamos saldo.

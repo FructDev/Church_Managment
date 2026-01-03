@@ -36,3 +36,10 @@ export const ROLES_CONSULTA: Rol[] = [
   "miembro_comite",
   "consulta",
 ];
+
+// 6. LIDERAZGO DE SOCIEDAD (Nuevo grupo para finanzas descentralizadas)
+export const ROLES_LIDERAZGO_SOCIEDAD: Rol[] = [
+  "presidente_sociedad",
+  "secretario_sociedad",
+  "tesorero_sociedad",
+];

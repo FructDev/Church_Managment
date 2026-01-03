@@ -137,15 +137,36 @@ const ActionsCell = ({
 // Definición de Columnas
 export const detalleColumns: ColumnDef<TransaccionDiezmoDetalle>[] = [
   {
-    accessorKey: "miembro.nombre_completo",
-    header: () => <div className="w-[50%]">Miembro</div>,
-    cell: ({ row }: { row: Row<TransaccionDiezmoDetalle> }) =>
-      row.original.miembro?.nombre_completo || "Miembro no encontrado",
+    accessorKey: "miembro", // Usamos esto como base
+    header: () => <div className="w-[50%]">Miembro / Donante</div>,
+    cell: ({ row }) => {
+      const tx = row.original;
+
+      // CASO 1: Es un miembro registrado
+      if (tx.miembro?.nombre_completo) {
+        return <div className="font-medium">{tx.miembro.nombre_completo}</div>;
+      }
+
+      // CASO 2: Es un externo (Aquí arreglamos el "No encontrado")
+      if (tx.nombre_externo) {
+        return (
+          <div className="flex items-center gap-2">
+            <span className="font-medium">{tx.nombre_externo}</span>
+            <Badge variant="secondary" className="text-[10px] h-5 px-1.5 bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100">
+              Externo
+            </Badge>
+          </div>
+        );
+      }
+
+      // CASO 3: Error de datos
+      return <span className="text-muted-foreground italic text-sm">No identificado</span>;
+    },
   },
   {
     accessorKey: "monto",
     header: () => <div className="text-right pr-4 w-[25%]">Monto</div>,
-    cell: ({ row }: { row: Row<TransaccionDiezmoDetalle> }) => (
+    cell: ({ row }) => (
       <div className="font-medium text-right pr-4">
         {formatCurrency(row.original.monto)}
       </div>
@@ -154,21 +175,14 @@ export const detalleColumns: ColumnDef<TransaccionDiezmoDetalle>[] = [
   {
     accessorKey: "metodo_pago",
     header: () => <div className="w-[25%]">Método</div>,
-    cell: ({ row }: { row: Row<TransaccionDiezmoDetalle> }) => (
+    cell: ({ row }) => (
       <Badge variant="outline" className="capitalize">
         {row.original.metodo_pago}
       </Badge>
     ),
   },
-  // --- ¡NUEVA COLUMNA DE ACCIONES! ---
   {
     id: "actions",
-    cell: ({
-      row,
-      table,
-    }: {
-      row: Row<TransaccionDiezmoDetalle>;
-      table: Table<TransaccionDiezmoDetalle>;
-    }) => <ActionsCell row={row} table={table} />,
+    cell: ({ row, table }) => <ActionsCell row={row} table={table} />,
   },
 ];

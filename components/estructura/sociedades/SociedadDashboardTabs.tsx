@@ -162,19 +162,37 @@ function SeguimientoTable({
   );
 }
 
+import { MovimientoForm } from "@/components/finanzas/caja-chica/MovimientoForm";
+import { MovimientosDataTable } from "@/components/finanzas/caja-chica/MovimientosDataTable";
+import { movimientosColumns as columns } from "@/components/finanzas/caja-chica/movimientos-columns";
+import { type CajaChicaConResponsable, type MovimientoCajaChicaConDetalle } from "@/actions/finanzas/cajaChicaActions";
+
+// ... (existing imports)
+
 export function SociedadDashboardTabs({
   data,
   childrenDirectiva,
+  cajaChica,
+  movimientos,
+  cuentasBancarias,
+  otrasCajas,
+  canManageFinanzas,
 }: {
   data: ResumenSociedad;
   childrenDirectiva: React.ReactNode;
+  cajaChica?: CajaChicaConResponsable | null;
+  movimientos?: MovimientoCajaChicaConDetalle[];
+  cuentasBancarias?: { id: string; nombre: string }[];
+  otrasCajas?: { id: string; nombre: string | null }[];
+  canManageFinanzas?: boolean;
 }) {
   return (
     <Tabs defaultValue="resumen" className="w-full">
-      <TabsList className="grid w-full grid-cols-3 lg:w-[400px]">
+      <TabsList className="grid w-full grid-cols-4 lg:w-[500px]">
         <TabsTrigger value="resumen">Resumen</TabsTrigger>
         <TabsTrigger value="seguimiento">Pastoral</TabsTrigger>
         <TabsTrigger value="directiva">Directiva</TabsTrigger>
+        <TabsTrigger value="finanzas">Finanzas</TabsTrigger>
       </TabsList>
 
       {/* TAB 1: RESUMEN */}
@@ -232,9 +250,57 @@ export function SociedadDashboardTabs({
         </Card>
       </TabsContent>
 
-      {/* TAB 3: DIRECTIVA (Reutilizamos lo que ya tenías) */}
+      {/* TAB 3: DIRECTIVA */}
       <TabsContent value="directiva" className="mt-4">
         {childrenDirectiva}
+      </TabsContent>
+
+      {/* TAB 4: FINANZAS */}
+      <TabsContent value="finanzas" className="space-y-6 mt-4">
+        {!cajaChica ? (
+          <div className="p-8 text-center border rounded-lg bg-muted/20">
+            <p className="text-muted-foreground">Esta sociedad no tiene una Caja Chica asignada.</p>
+          </div>
+        ) : (
+          <>
+            {/* Balance Card */}
+            <Card className="bg-gradient-to-br from-green-50 to-emerald-50 border-green-200">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-green-700">Fondos Disponibles</CardTitle>
+                <CardDescription>Saldo actual en caja chica</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="text-4xl font-bold text-green-800">
+                  RD$ {cajaChica.monto_disponible.toLocaleString("es-DO", { minimumFractionDigits: 2 })}
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Register Expense Form */}
+            {canManageFinanzas && (
+              <MovimientoForm
+                cajaChicaId={cajaChica.id}
+                cuentasBancarias={cuentasBancarias || []}
+                otrasCajas={otrasCajas || []}
+              />
+            )}
+
+            {/* History Table */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Historial de Movimientos</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <MovimientosDataTable
+                  columns={columns}
+                  data={movimientos || []}
+                  canManage={canManageFinanzas || false}
+                  cajaChicaId={cajaChica.id}
+                />
+              </CardContent>
+            </Card>
+          </>
+        )}
       </TabsContent>
     </Tabs>
   );

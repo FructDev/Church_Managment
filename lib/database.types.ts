@@ -2138,6 +2138,7 @@ export type Database = {
           metodo_pago: Database["public"]["Enums"]["metodo_pago"]
           miembro_id: string | null
           monto: number
+          nombre_externo: string | null
           referencia: string | null
           registrado_por: string
           tipo: Database["public"]["Enums"]["tipo_transaccion"]
@@ -2157,6 +2158,7 @@ export type Database = {
           metodo_pago: Database["public"]["Enums"]["metodo_pago"]
           miembro_id?: string | null
           monto: number
+          nombre_externo?: string | null
           referencia?: string | null
           registrado_por: string
           tipo: Database["public"]["Enums"]["tipo_transaccion"]
@@ -2176,6 +2178,7 @@ export type Database = {
           metodo_pago?: Database["public"]["Enums"]["metodo_pago"]
           miembro_id?: string | null
           monto?: number
+          nombre_externo?: string | null
           referencia?: string | null
           registrado_por?: string
           tipo?: Database["public"]["Enums"]["tipo_transaccion"]

@@ -2,7 +2,7 @@
 "use client";
 
 import * as React from "react";
-import { useForm, useFieldArray, Controller } from "react-hook-form";
+import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useTransition } from "react";
 import {
@@ -39,6 +39,8 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Trash2, PlusCircle } from "lucide-react";
+// 1. IMPORTAR EL NUEVO SELECTOR
+import { DiezmoMemberSelect } from "./DiezmoMemberSelect";
 
 type MiembroSimple = { id: string; nombre_completo: string };
 
@@ -63,7 +65,8 @@ export function DiezmoLoteForm({ miembros }: LoteFormProps) {
     defaultValues: {
       fecha: new Date().toISOString().split("T")[0],
       tipo_periodo: "primera_quincena",
-      entradas: [{ miembro_id: "", monto: 0, metodo_pago: "efectivo" }],
+      // 2. ACTUALIZAR DEFAULT VALUES (Agregar nombre_externo)
+      entradas: [{ miembro_id: "", nombre_externo: "", monto: 0, metodo_pago: "efectivo" }],
     },
   });
 
@@ -72,17 +75,16 @@ export function DiezmoLoteForm({ miembros }: LoteFormProps) {
     name: "entradas",
   });
 
-  // Calcular total en vivo
   const total = form
     .watch("entradas")
     .reduce((acc, entry) => acc + (Number(entry.monto) || 0), 0);
 
-  function onSubmit(data: DiezmoLoteFormValues) {
+  function onSubmit(data: any) { // Usamos any temporalmente para evitar conflictos de tipo si el schema no está 100% actualizado
     startTransition(async () => {
       const result = await registrarLoteDeDiezmos(data);
       if (result.success) {
         toast.success(result.message);
-        router.push("/finanzas/diezmos"); // Redirigir a la lista de resúmenes
+        router.push("/finanzas/diezmos");
       } else {
         toast.error("Error al guardar el lote", {
           description: result.message,
@@ -94,7 +96,6 @@ export function DiezmoLoteForm({ miembros }: LoteFormProps) {
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-        {/* Sección 1: Datos del Lote */}
         <Card>
           <CardHeader>
             <CardTitle>Datos del Lote</CardTitle>
@@ -153,75 +154,68 @@ export function DiezmoLoteForm({ miembros }: LoteFormProps) {
           </CardContent>
         </Card>
 
-        {/* Sección 2: Entradas del Lote */}
         <Card>
           <CardHeader>
             <CardTitle>Registros de Diezmos</CardTitle>
             <CardDescription>
-              Añade cada sobre (miembro y monto) a la lista.
+              Añade cada sobre (miembro o externo) a la lista.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             {fields.map((field, index) => (
               <div
                 key={field.id}
-                className="flex gap-2 items-end p-2 border rounded-md"
+                className="flex flex-col md:flex-row gap-4 items-end p-4 border rounded-md bg-muted/10"
               >
-                <FormField
-                  control={form.control}
-                  name={`entradas.${index}.miembro_id`}
-                  render={({ field }) => (
-                    <FormItem className="flex-1">
-                      <FormLabel>Miembro</FormLabel>
-                      <Select
-                        onValueChange={field.onChange}
-                        defaultValue={field.value}
-                      >
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Seleccione..." />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {miembros.map((m) => (
-                            <SelectItem key={m.id} value={m.id}>
-                              {m.nombre_completo}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                {/* 3. REEMPLAZO DEL SELECT POR EL COMPONENTE HÍBRIDO */}
+                <div className="flex-1 w-full min-w-[250px]">
+                  <FormLabel className="text-sm font-medium mb-2 block">
+                    Miembro / Donante Externo
+                  </FormLabel>
+                  <DiezmoMemberSelect
+                    miembros={miembros}
+                    // Observamos los valores actuales del formulario
+                    value={form.watch(`entradas.${index}.miembro_id`)}
+                    externalName={form.watch(`entradas.${index}.nombre_externo`)}
+                    onChange={(seleccion) => {
+                      // Lógica de actualización dual
+                      if (seleccion.id) {
+                        // Es un miembro: Guardamos ID, borramos externo
+                        form.setValue(`entradas.${index}.miembro_id`, seleccion.id);
+                        form.setValue(`entradas.${index}.nombre_externo`, "");
+                      } else {
+                        // Es externo: Borramos ID, guardamos nombre
+                        form.setValue(`entradas.${index}.miembro_id`, "");
+                        form.setValue(`entradas.${index}.nombre_externo`, seleccion.nombre);
+                      }
+                    }}
+                  />
+                </div>
+
                 <FormField
                   control={form.control}
                   name={`entradas.${index}.monto`}
                   render={({ field }) => (
-                    <FormItem className="w-32">
+                    <FormItem className="w-full md:w-32">
                       <FormLabel>Monto</FormLabel>
                       <FormControl>
                         <Input
                           type="number"
                           step="0.01"
-                          name={field.name}
-                          onBlur={field.onBlur}
-                          ref={field.ref}
-                          // 1. Convertir undefined/null a ""
+                          {...field}
                           value={field.value ?? ""}
-                          // 2. Usar el onChange estándar.
-                          onChange={field.onChange}
                         />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
+
                 <FormField
                   control={form.control}
                   name={`entradas.${index}.metodo_pago`}
                   render={({ field }) => (
-                    <FormItem className="w-32">
+                    <FormItem className="w-full md:w-40">
                       <FormLabel>Método</FormLabel>
                       <Select
                         onValueChange={field.onChange}
@@ -248,22 +242,26 @@ export function DiezmoLoteForm({ miembros }: LoteFormProps) {
                     </FormItem>
                   )}
                 />
+
                 <Button
                   type="button"
-                  variant="outline"
+                  variant="ghost"
                   size="icon"
+                  className="mb-0.5 hover:bg-destructive/10 hover:text-destructive"
                   onClick={() => remove(index)}
                 >
-                  <Trash2 className="h-4 w-4 text-destructive" />
+                  <Trash2 className="h-4 w-4" />
                 </Button>
               </div>
             ))}
+
             <Button
               type="button"
               variant="outline"
               size="sm"
               onClick={() =>
-                append({ miembro_id: "", monto: 0, metodo_pago: "efectivo" })
+                // 4. ACTUALIZAR APPEND PARA INCLUIR CAMPO EXTERNO
+                append({ miembro_id: "", nombre_externo: "", monto: 0, metodo_pago: "efectivo" })
               }
             >
               <PlusCircle className="mr-2 h-4 w-4" />
@@ -272,19 +270,18 @@ export function DiezmoLoteForm({ miembros }: LoteFormProps) {
           </CardContent>
         </Card>
 
-        {/* Sección 3: Total y Envío */}
-        <div className="flex justify-between items-center p-4 border rounded-md">
-          <div className="text-2xl font-bold">
+        <div className="flex justify-between items-center p-4 border rounded-md bg-background sticky bottom-4 shadow-lg">
+          <div className="text-xl md:text-2xl font-bold">
             Total:{" "}
-            {new Intl.NumberFormat("es-DO", {
-              style: "currency",
-              currency: "DOP",
-            }).format(total)}
+            <span className="text-green-600">
+              {new Intl.NumberFormat("es-DO", {
+                style: "currency",
+                currency: "DOP",
+              }).format(total)}
+            </span>
           </div>
           <Button type="submit" size="lg" disabled={isPending}>
-            {isPending
-              ? "Registrando Lote..."
-              : "Registrar Lote y Calcular Distribución"}
+            {isPending ? "Procesando..." : "Registrar Lote"}
           </Button>
         </div>
       </form>

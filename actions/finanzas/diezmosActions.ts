@@ -137,7 +137,15 @@ export async function registrarLoteDeDiezmos(data: DiezmoLoteFormValues) {
       monto: entry.monto,
       metodo_pago: entry.metodo_pago,
       descripcion: "Registro de diezmo",
-      miembro_id: entry.miembro_id,
+
+      // --- CAMBIO AQUÍ ---
+      // 1. Si hay miembro_id, úsalo. Si es string vacío, manda null.
+      miembro_id: entry.miembro_id || null,
+
+      // 2. AGREGAR ESTA LÍNEA (Si no es miembro, guarda el nombre externo)
+      // Usamos (entry as any) por si TypeScript se queja de que el tipo viejo no tiene el campo
+      nombre_externo: entry.miembro_id ? null : ((entry as any).nombre_externo || "Anónimo"),
+
       registrado_por: user.id,
     }));
 
@@ -327,6 +335,7 @@ export type TransaccionDiezmoDetalle = {
   id: string; // id de la transacción
   monto: number;
   metodo_pago: string;
+  nombre_externo: string | null;
   miembro: {
     nombre_completo: string;
   } | null;
@@ -378,6 +387,7 @@ export async function getDiezmoDetalleById(
         id,
         monto,
         metodo_pago,
+        nombre_externo,
         miembro: miembros ( nombre_completo )
       )
     `
@@ -395,10 +405,25 @@ export async function getDiezmoDetalleById(
     };
   }
 
-  // Mapeamos para limpiar la estructura de datos
-  const transaccionesLimpias = transacciones.map(
-    (t) => t.transaccion
-  ) as TransaccionDiezmoDetalle[];
+  // Mapeamos explícitamente para asegurar que 'nombre_externo' no se pierda
+  const transaccionesLimpias = transacciones.map((t) => {
+    // 1. Usamos 'any' para leer los datos crudos que vienen de la BD
+    // (Esto ignora si los tipos viejos dicen que no existe)
+    const raw = t.transaccion as any;
+
+    // 2. Construimos el objeto final manualmente
+    return {
+      id: raw.id,
+      monto: raw.monto,
+      metodo_pago: raw.metodo_pago,
+
+      // AQUÍ ESTÁ LA SOLUCIÓN:
+      // Leemos explícitamente el campo y si no existe, ponemos null.
+      nombre_externo: raw.nombre_externo || null,
+
+      miembro: raw.miembro,
+    };
+  }) as TransaccionDiezmoDetalle[];
 
   return {
     resumen: resumen as unknown as DiezmoResumenParaTabla,

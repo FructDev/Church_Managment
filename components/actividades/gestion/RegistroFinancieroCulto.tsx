@@ -23,6 +23,7 @@ interface Props {
   actividadTitulo: string;
   cajas: SimpleItem[];
   categorias: CategoriaItem[];
+  sociedadCajaId?: string | null;
 }
 
 export function RegistroFinancieroCulto({
@@ -30,6 +31,7 @@ export function RegistroFinancieroCulto({
   actividadTitulo,
   cajas,
   categorias,
+  sociedadCajaId,
 }: Props) {
   const [isPending, startTransition] = useTransition();
 
@@ -48,9 +50,10 @@ export function RegistroFinancieroCulto({
   const defaultCajaGeneral =
     cajas.find((c) => c.nombre?.toLowerCase().includes("general"))?.id || "";
 
-  // 3. ID de Caja de Sociedad (Basado en título)
+  // 3. ID de Caja de Sociedad (Basado en título o ID directo)
   const tituloLower = actividadTitulo.toLowerCase();
   const defaultCajaSociedad =
+    sociedadCajaId ||
     cajas.find(
       (c) =>
         c.nombre &&

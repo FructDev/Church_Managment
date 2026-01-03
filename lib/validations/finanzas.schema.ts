@@ -89,7 +89,8 @@ export type EgresoFormValues = z.infer<typeof egresoSchema>;
 
 // Este es el schema para CADA LÍNEA (fila) en el formulario
 export const diezmoLoteEntrySchema = z.object({
-  miembro_id: z.string().uuid({ message: "Debe seleccionar un miembro." }),
+  miembro_id: z.string().optional().or(z.literal("")).nullable(),
+  nombre_externo: z.string().optional().or(z.literal("")).nullable(),
   monto: z.preprocess(
     (val) => {
       if (typeof val === "string") {
@@ -112,6 +113,16 @@ export const diezmoLoteEntrySchema = z.object({
     "tarjeta",
     "otro",
   ]),
+}).refine((data) => {
+  // 3. VALIDACIÓN PERSONALIZADA:
+  // Verificamos que al menos uno de los dos (ID o Nombre) tenga valor.
+  const tieneMiembro = data.miembro_id && data.miembro_id.length > 0;
+  const tieneExterno = data.nombre_externo && data.nombre_externo.length > 0;
+
+  return tieneMiembro || tieneExterno;
+}, {
+  message: "Debe seleccionar un miembro o escribir un nombre externo.",
+  path: ["miembro_id"], // El error se mostrará en el campo del selector
 });
 
 // Este es el schema para el formulario COMPLETO (un array de entradas)

@@ -12,6 +12,7 @@ import {
 } from "@/lib/validations/actividades.schema";
 import { checkPermission } from "@/lib/auth/guards";
 import { revalidatePath } from "next/cache";
+import { getSessionInfo } from "@/lib/auth/utils";
 
 // Tipo optimizado para el calendario (lectura ligera)
 export type ActividadCalendario = {
@@ -314,7 +315,7 @@ export async function getActividadInfo(id: string) {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("actividades")
-    .select("id, titulo, fecha_inicio")
+    .select("id, titulo, fecha_inicio, sociedad_id, notas")
     .eq("id", id)
     .single();
 
@@ -323,4 +324,22 @@ export async function getActividadInfo(id: string) {
     return null;
   }
   return data;
+}
+
+export async function updateNotasActividad(actividadId: string, notas: string) {
+  // Verificamos permisos (usa el rol que corresponda, ej. ROLES_ADMINISTRATIVOS)
+  const { profile } = await getSessionInfo()
+  if (!profile) return { success: false, message: 'No autorizado' }
+
+  const supabase = await createClient()
+
+  const { error } = await supabase
+    .from('actividades')
+    .update({ notas })
+    .eq('id', actividadId)
+
+  if (error) return { success: false, message: error.message }
+
+  revalidatePath(`/actividades/${actividadId}/gestion`)
+  return { success: true, message: 'Notas guardadas' }
 }
