@@ -49,6 +49,8 @@ const ActionsCell = ({
 
   const meta = table.options.meta as {
     categorias: CategoriaEgreso[];
+    cajas: { id: string; nombre: string }[];
+    cuentas: { id: string; nombre: string }[];
     canManage: boolean;
   };
 
@@ -87,6 +89,8 @@ const ActionsCell = ({
           mode="edit"
           egreso={egreso}
           categorias={meta.categorias}
+          cajas={meta.cajas}
+          cuentas={meta.cuentas}
         >
           <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
             <Edit className="mr-2 h-4 w-4" /> Editar

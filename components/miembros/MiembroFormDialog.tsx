@@ -11,7 +11,7 @@ import {
   type MiembroFormValues,
 } from "@/lib/validations/miembros.schema";
 import { upsertMiembro } from "@/actions/miembros/miembrosActions";
-import { type MiembroDetalle } from "@/actions/miembros/miembrosActions";
+import { type MiembroDetalle, type MiembroConSociedad } from "@/actions/miembros/miembrosActions";
 import Image from "next/image";
 
 // Componentes Shadcn
@@ -54,7 +54,7 @@ type EstadoCivil = "soltero" | "casado" | "viudo" | "divorciado";
 
 interface MiembroFormDialogProps {
   mode: "add" | "edit";
-  miembro?: MiembroDetalle;
+  miembro?: MiembroDetalle | MiembroConSociedad;
   sociedades: SociedadSimple[];
   children: React.ReactNode;
 }

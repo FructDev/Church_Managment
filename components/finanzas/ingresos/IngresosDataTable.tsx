@@ -30,7 +30,7 @@ import { Button } from "@/components/ui/button";
 import { IngresoGridCard } from "./IngresoGridCard";
 
 type CategoriaIngreso = { id: string; nombre: string; tipo: string };
-type CajaSimple = { id: string; nombre: string | null };
+type CajaSimple = { id: string; nombre: string };
 
 interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[];
@@ -68,7 +68,7 @@ export function IngresosDataTable<TData, TValue>({
     meta: {
       categorias,
       canManage,
-      cajasDisponibles: cajas,
+      cajas: cajas,
     },
   });
 

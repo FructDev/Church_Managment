@@ -72,7 +72,7 @@ export function ComiteFormDialog({
       id: comite?.id || null,
       nombre: comite?.nombre || "",
       descripcion: comite?.descripcion || "",
-      tipo: (comite?.tipo as ComiteTipo) || undefined,
+      tipo: (comite?.tipo as any) || undefined,
       activo: true, // Asumimos que al editar/crear está activo
     },
   });

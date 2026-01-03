@@ -127,8 +127,11 @@ export function PresupuestoFormDialog({
                       name={field.name}
                       onBlur={field.onBlur}
                       ref={field.ref}
-                      value={field.value ?? ""}
-                      onChange={field.onChange}
+                      value={(field.value as any) ?? ""}
+                      onChange={(e) => {
+                        const val = parseInt(e.target.value);
+                        field.onChange(isNaN(val) ? 0 : val);
+                      }}
                       disabled={mode === "edit"}
                     />
                     {/* --- FIN DE CORRECCIÓN --- */}

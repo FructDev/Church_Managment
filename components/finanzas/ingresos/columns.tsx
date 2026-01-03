@@ -54,6 +54,7 @@ const ActionsCell = ({
   const meta = table.options.meta as {
     categorias: CategoriaIngreso[];
     canManage: boolean;
+    cajas: { id: string; nombre: string }[];
   };
 
   const handleDelete = () => {
@@ -91,6 +92,7 @@ const ActionsCell = ({
           mode="edit"
           ingreso={ingreso}
           categorias={meta.categorias}
+          cajas={meta.cajas}
         >
           <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
             <Edit className="mr-2 h-4 w-4" /> Editar

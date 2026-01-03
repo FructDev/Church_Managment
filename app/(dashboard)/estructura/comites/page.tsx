@@ -64,6 +64,7 @@ export default async function ComitesPage() {
             key={comite.id}
             comite={comite}
             tiposComite={tiposComite}
+            canManage={canManage}
           />
         ))}
       </div>

@@ -41,7 +41,7 @@ interface ComiteCardProps {
   canManage: boolean;
 }
 
-export function ComiteCard({ comite, tiposComite }: ComiteCardProps) {
+export function ComiteCard({ comite, tiposComite, canManage }: ComiteCardProps) {
   const [isDeleting, startDeleteTransition] = React.useTransition();
   const href = `/estructura/comites/${comite.id}`;
 
@@ -76,40 +76,42 @@ export function ComiteCard({ comite, tiposComite }: ComiteCardProps) {
           </div>
 
           <div className="relative z-20">
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="-mt-2 -mr-2 h-8 w-8 text-muted-foreground"
-                >
-                  <MoreVertical className="h-4 w-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <ComiteFormDialog
-                  mode="edit"
-                  comite={comite}
-                  tiposComite={tiposComite}
-                >
-                  <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
-                    <Edit className="mr-2 h-4 w-4" /> Editar
-                  </DropdownMenuItem>
-                </ComiteFormDialog>
-                <ConfirmAlertDialog
-                  title="¿Eliminar Comité?"
-                  description={`Se eliminará "${comite.nombre}" y sus asignaciones.`}
-                  onConfirm={handleDelete}
-                >
-                  <DropdownMenuItem
-                    onSelect={(e) => e.preventDefault()}
-                    className="text-destructive"
+            {canManage && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="-mt-2 -mr-2 h-8 w-8 text-muted-foreground"
                   >
-                    <Trash2 className="mr-2 h-4 w-4" /> Eliminar
-                  </DropdownMenuItem>
-                </ConfirmAlertDialog>
-              </DropdownMenuContent>
-            </DropdownMenu>
+                    <MoreVertical className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <ComiteFormDialog
+                    mode="edit"
+                    comite={comite}
+                    tiposComite={tiposComite}
+                  >
+                    <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+                      <Edit className="mr-2 h-4 w-4" /> Editar
+                    </DropdownMenuItem>
+                  </ComiteFormDialog>
+                  <ConfirmAlertDialog
+                    title="¿Eliminar Comité?"
+                    description={`Se eliminará "${comite.nombre}" y sus asignaciones.`}
+                    onConfirm={handleDelete}
+                  >
+                    <DropdownMenuItem
+                      onSelect={(e) => e.preventDefault()}
+                      className="text-destructive"
+                    >
+                      <Trash2 className="mr-2 h-4 w-4" /> Eliminar
+                    </DropdownMenuItem>
+                  </ConfirmAlertDialog>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
           </div>
         </CardHeader>
 

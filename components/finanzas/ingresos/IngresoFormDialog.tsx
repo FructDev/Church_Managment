@@ -153,8 +153,11 @@ export function IngresoFormDialog({
                         step="0.01"
                         {...field}
                         name="monto"
-                        value={field.value ?? ""}
-                        onChange={field.onChange}
+                        value={(field.value as any) ?? ""}
+                        onChange={(e) => {
+                          const val = parseFloat(e.target.value);
+                          field.onChange(isNaN(val) ? 0 : val);
+                        }}
                       />
                     </FormControl>
                     <FormMessage />

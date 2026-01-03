@@ -38,17 +38,14 @@ export type MiembroDetalle = Database["public"]["Tables"]["miembros"]["Row"] & {
 };
 
 // Tipo para la lista de miembros
-export type MiembroConSociedad = {
-  id: string;
-  nombre_completo: string;
-  telefono: string | null;
-  email: string | null;
-  foto_url: string | null; // <-- ESTA LÍNEA DEBE EXISTIR
-  estado_membresia: string;
+// Tipo para la lista de miembros
+export type MiembroConSociedad = Database["public"]["Tables"]["miembros"]["Row"] & {
   sociedad: {
     id: string;
     nombre: string;
   } | null;
+  fecha_conversion?: string | null;
+  rango_ministerial?: string | null;
 };
 
 // Tipo para los filtros

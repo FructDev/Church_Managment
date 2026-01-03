@@ -203,7 +203,11 @@ export function DiezmoLoteForm({ miembros }: LoteFormProps) {
                           type="number"
                           step="0.01"
                           {...field}
-                          value={field.value ?? ""}
+                          value={(field.value as any) ?? ""}
+                          onChange={(e) => {
+                            const val = parseFloat(e.target.value);
+                            field.onChange(isNaN(val) ? 0 : val);
+                          }}
                         />
                       </FormControl>
                       <FormMessage />

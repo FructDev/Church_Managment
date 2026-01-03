@@ -37,6 +37,11 @@ export default async function IngresosPage() {
     getSelectoresFinancieros(),
   ]);
 
+  const cajas = selectores.cajas.map((c) => ({
+    id: c.id,
+    nombre: c.nombre || "Caja sin nombre",
+  }));
+
   return (
     <div className="w-full space-y-4">
       <div className="flex items-center justify-between">
@@ -45,7 +50,7 @@ export default async function IngresosPage() {
           <IngresoFormDialog
             mode="add"
             categorias={categorias}
-            cajas={selectores.cajas}
+            cajas={cajas}
           >
             <Button>
               <PlusCircle className="mr-2 h-4 w-4" />
@@ -61,7 +66,7 @@ export default async function IngresosPage() {
         categorias={categorias}
         canManage={canManage}
         pageCount={1} // (Placeholder, la acción 'getIngresos' aún no pagina)
-        cajas={selectores.cajas}
+        cajas={cajas}
       />
     </div>
   );

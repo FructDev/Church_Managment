@@ -30,7 +30,7 @@ export async function signUp(data: RegisterFormValues): Promise<FormState> {
 
   // 3. Usar el cliente Admin de Supabase para crear el usuario
   // (Usamos el Service Role Key para bypassear RLS y crear usuarios confirmados)
-  const supabaseAdmin = createClient(true); // ¡Necesitaremos actualizar server.ts!
+  const supabaseAdmin = await createClient(true); // ¡Necesitaremos actualizar server.ts!
 
   const { data: authData, error: authError } =
     await supabaseAdmin.auth.admin.createUser({
