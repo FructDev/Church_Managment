@@ -247,7 +247,7 @@ export async function getListaAsistencia(
 
   if (miembrosError) {
     console.error("Error fetching miembros:", miembrosError);
-    return [];
+    return { miembros: [], visitantes: [] };
   }
 
   // 2. Obtener registros de asistencia existentes para esta actividad
@@ -256,15 +256,18 @@ export async function getListaAsistencia(
     .select("miembro_id, presente, nombre_visitante, tipo_asistente")
     .eq("actividad_id", actividadId);
 
+  // Cast to any to bypass outdated DB types
+  const asistenciaTyped = asistenciaExistente as any[];
+
   if (asisError) {
     console.error("Error fetching asistencia:", asisError);
-    return [];
+    return { miembros: [], visitantes: [] };
   }
 
   // 3. Mapear y combinar (Merge)
   // Creamos un Map para búsqueda rápida
   const asistenciaMap = new Map(
-    asistenciaExistente?.map((a) => [a.miembro_id, a.presente])
+    asistenciaTyped?.map((a) => [a.miembro_id, a.presente])
   );
 
   const listaMiembros = miembros.map((m) => ({
@@ -276,7 +279,7 @@ export async function getListaAsistencia(
   }));
 
   // 4. Filtrar visitantes (records donde tipo_asistente = 'visitante')
-  const visitantes = (asistenciaExistente || [])
+  const visitantes = (asistenciaTyped || [])
     .filter((a) => a.tipo_asistente === "visitante" && a.nombre_visitante)
     .map((a) => a.nombre_visitante as string);
 
