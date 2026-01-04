@@ -34,7 +34,7 @@ export default async function AsistenciaPage(props: {
   if (!canManage)
     return <div className="p-10 text-center">Acceso Denegado</div>;
 
-  const [actividad, listaMiembros] = await Promise.all([
+  const [actividad, asistenciaData] = await Promise.all([
     getActividadInfo(id),
     getListaAsistencia(id),
   ]);
@@ -67,7 +67,7 @@ export default async function AsistenciaPage(props: {
         </p>
       </div>
 
-      <AsistenciaForm actividadId={id} initialData={listaMiembros} />
+      <AsistenciaForm actividadId={id} initialData={asistenciaData} />
     </div>
   );
 }

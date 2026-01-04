@@ -4,22 +4,28 @@ import * as React from "react";
 import {
   type MiembroParaAsistencia,
   guardarAsistencia,
+  type DatosAsistencia,
 } from "@/actions/actividades/actividadesActions";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { User, Save, Search } from "lucide-react";
+import { User, Save, Search, Plus, Trash, Users } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 
 interface Props {
   actividadId: string;
-  initialData: MiembroParaAsistencia[];
+  initialData: DatosAsistencia; // [NEW] Usamos el nuevo tipo
 }
 
 export function AsistenciaForm({ actividadId, initialData }: Props) {
-  const [miembros, setMiembros] = React.useState(initialData);
+  const [miembros, setMiembros] = React.useState(initialData.miembros);
+  const [visitantes, setVisitantes] = React.useState<string[]>(
+    initialData.visitantes
+  );
+  const [newVisitor, setNewVisitor] = React.useState("");
+
   const [filter, setFilter] = React.useState("");
   const [isSaving, setIsSaving] = React.useState(false);
   const router = useRouter();
@@ -41,7 +47,19 @@ export function AsistenciaForm({ actividadId, initialData }: Props) {
   };
 
   // Estadísticas en vivo
-  const totalPresentes = miembros.filter((m) => m.presente).length;
+  const totalPresentes =
+    miembros.filter((m) => m.presente).length + visitantes.length;
+  const totalMiembros = miembros.length;
+
+  const handleAddVisitor = () => {
+    if (!newVisitor.trim()) return;
+    setVisitantes((prev) => [...prev, newVisitor.trim()]);
+    setNewVisitor("");
+  };
+
+  const removeVisitor = (index: number) => {
+    setVisitantes((prev) => prev.filter((_, i) => i !== index));
+  };
 
   const handleSave = async () => {
     setIsSaving(true);
@@ -53,6 +71,7 @@ export function AsistenciaForm({ actividadId, initialData }: Props) {
           miembro_id: m.id,
           presente: m.presente,
         })),
+        visitantes, // [NEW] Enviamos nombres de visitantes
       };
 
       const result = await guardarAsistencia(payload);
@@ -85,7 +104,8 @@ export function AsistenciaForm({ actividadId, initialData }: Props) {
           <div className="text-sm font-medium text-muted-foreground">
             Presentes:{" "}
             <span className="text-foreground font-bold">{totalPresentes}</span>{" "}
-            / {miembros.length}
+            (Miembros: {miembros.filter((m) => m.presente).length}, Visitantes:{" "}
+            {visitantes.length}) / {totalMiembros} totales
           </div>
           <Button onClick={handleSave} disabled={isSaving}>
             <Save className="mr-2 h-4 w-4" />
@@ -99,11 +119,10 @@ export function AsistenciaForm({ actividadId, initialData }: Props) {
         {filteredMiembros.map((miembro) => (
           <div
             key={miembro.id}
-            className={`flex items-center gap-3 p-3 rounded-lg border transition-colors cursor-pointer ${
-              miembro.presente
-                ? "bg-primary/5 border-primary/50"
-                : "bg-card hover:bg-accent/50"
-            }`}
+            className={`flex items-center gap-3 p-3 rounded-lg border transition-colors cursor-pointer ${miembro.presente
+              ? "bg-primary/5 border-primary/50"
+              : "bg-card hover:bg-accent/50"
+              }`}
             onClick={() => toggleAsistencia(miembro.id)}
           >
             <Checkbox
@@ -121,9 +140,8 @@ export function AsistenciaForm({ actividadId, initialData }: Props) {
             </Avatar>
 
             <span
-              className={`text-sm font-medium ${
-                miembro.presente ? "text-primary" : ""
-              }`}
+              className={`text-sm font-medium ${miembro.presente ? "text-primary" : ""
+                }`}
             >
               {miembro.nombre_completo}
             </span>
@@ -133,6 +151,57 @@ export function AsistenciaForm({ actividadId, initialData }: Props) {
         {filteredMiembros.length === 0 && (
           <div className="col-span-full text-center py-10 text-muted-foreground">
             No se encontraron miembros.
+          </div>
+        )}
+      </div>
+
+
+      {/* --- SECCIÓN VISITANTES --- */}
+      <div className="space-y-4 pt-4 border-t">
+        <h3 className="text-lg font-semibold flex items-center gap-2">
+          <Users className="h-5 w-5 text-indigo-600" />
+          Registro de Visitantes
+        </h3>
+        <p className="text-sm text-muted-foreground">
+          Agrega aquí a las personas que nos visitan y no están en la lista de
+          miembros.
+        </p>
+
+        <div className="flex gap-2 max-w-md">
+          <Input
+            placeholder="Nombre del visitante..."
+            value={newVisitor}
+            onChange={(e) => setNewVisitor(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                handleAddVisitor();
+              }
+            }}
+          />
+          <Button onClick={handleAddVisitor} variant="secondary">
+            <Plus className="h-4 w-4 mr-1" />
+            Agregar
+          </Button>
+        </div>
+
+        {visitantes.length > 0 && (
+          <div className="flex flex-wrap gap-2">
+            {visitantes.map((v, index) => (
+              <div
+                key={`${v}-${index}`}
+                className="flex items-center gap-2 bg-indigo-50 border border-indigo-100 px-3 py-1.5 rounded-full text-sm font-medium text-indigo-800"
+              >
+                <User className="h-3 w-3" />
+                {v}
+                <button
+                  onClick={() => removeVisitor(index)}
+                  className="ml-1 text-indigo-400 hover:text-red-500 transition-colors"
+                >
+                  <Trash className="h-3 w-3" />
+                </button>
+              </div>
+            ))}
           </div>
         )}
       </div>

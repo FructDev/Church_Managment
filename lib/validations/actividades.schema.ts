@@ -76,6 +76,7 @@ export const asistenciaRecordSchema = z.object({
 export const registroAsistenciaSchema = z.object({
   actividad_id: z.string().uuid(),
   asistencias: z.array(asistenciaRecordSchema),
+  visitantes: z.array(z.string()).optional().default([]), // [NEW] Lista de nombres de visitantes
 });
 
 export type RegistroAsistenciaFormValues = z.infer<

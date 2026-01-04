@@ -19,9 +19,10 @@ export async function AsistenciaCard({
   titulo: string;
 }) {
   // Obtenemos un conteo rápido
-  const lista = await getListaAsistencia(actividadId);
-  const presentes = lista.filter((m) => m.presente).length;
-  const total = lista.length;
+  const { miembros, visitantes } = await getListaAsistencia(actividadId);
+  const presentes =
+    miembros.filter((m) => m.presente).length + visitantes.length;
+  const total = miembros.length;
 
   return (
     <Card>

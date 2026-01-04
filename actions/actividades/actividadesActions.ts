@@ -35,6 +35,12 @@ export type MiembroParaAsistencia = {
   presente: boolean; // Estado actual (para la UI)
 };
 
+// [NEW] Tipo de retorno ampliado para incluir visitantes
+export type DatosAsistencia = {
+  miembros: MiembroParaAsistencia[];
+  visitantes: string[];
+};
+
 // Tipo simple para selectores
 export type TipoActividadSimple = {
   id: string;
@@ -229,7 +235,7 @@ export async function getTiposActividadesCompletos() {
  */
 export async function getListaAsistencia(
   actividadId: string
-): Promise<MiembroParaAsistencia[]> {
+): Promise<DatosAsistencia> {
   const supabase = await createClient();
 
   // 1. Obtener todos los miembros activos
@@ -247,7 +253,7 @@ export async function getListaAsistencia(
   // 2. Obtener registros de asistencia existentes para esta actividad
   const { data: asistenciaExistente, error: asisError } = await supabase
     .from("asistencia_actividades")
-    .select("miembro_id, presente")
+    .select("miembro_id, presente, nombre_visitante, tipo_asistente")
     .eq("actividad_id", actividadId);
 
   if (asisError) {
@@ -261,13 +267,20 @@ export async function getListaAsistencia(
     asistenciaExistente?.map((a) => [a.miembro_id, a.presente])
   );
 
-  return miembros.map((m) => ({
+  const listaMiembros = miembros.map((m) => ({
     id: m.id,
     nombre_completo: m.nombre_completo,
     foto_url: m.foto_url,
     // Si existe en el mapa, usar ese valor. Si no, false.
     presente: asistenciaMap.get(m.id) || false,
   }));
+
+  // 4. Filtrar visitantes (records donde tipo_asistente = 'visitante')
+  const visitantes = (asistenciaExistente || [])
+    .filter((a) => a.tipo_asistente === "visitante" && a.nombre_visitante)
+    .map((a) => a.nombre_visitante as string);
+
+  return { miembros: listaMiembros, visitantes };
 }
 
 /**
@@ -282,29 +295,65 @@ export async function guardarAsistencia(data: RegistroAsistenciaFormValues) {
   if (!validated.success)
     return { success: false, message: "Datos inválidos." };
 
-  const { actividad_id, asistencias } = validated.data;
+  const { actividad_id, asistencias, visitantes } = validated.data;
 
   // Preparamos los datos para UPSERT
-  // Solo necesitamos enviar los que están 'presente = true' o los que cambiaron,
-  // pero para simplificar y limpiar, enviaremos el estado explícito.
-
-  // NOTA: La estrategia más limpia es borrar lo anterior e insertar lo nuevo,
-  // O hacer un upsert masivo. Haremos Upsert.
-
   const recordsToUpsert = asistencias.map((a) => ({
     actividad_id,
     miembro_id: a.miembro_id,
     presente: a.presente,
+    tipo_asistente: "miembro",
     registrado_por: user.id,
     fecha_registro: new Date().toISOString(),
   }));
 
-  const { error } = await supabase
+  // [NEW] Manejo de Visitantes
+  // Estrategia: Borrar todos los visitantes anteriores de esta actividad e insertar los nuevos.
+  // Es más simple que intentar hacer diff de strings.
+  const { error: deleteError } = await supabase
+    .from("asistencia_actividades")
+    .delete()
+    .eq("actividad_id", actividad_id)
+    .eq("tipo_asistente", "visitante");
+
+  if (deleteError) {
+    return { success: false, message: "Error al limpiar visitantes previos." };
+  }
+
+  const visitantesToInsert = visitantes.map((nombre) => ({
+    actividad_id,
+    miembro_id: null, // Null para visitantes
+    nombre_visitante: nombre,
+    tipo_asistente: "visitante",
+    presente: true, // Siempre presentes si están en la lista
+    registrado_por: user.id,
+    fecha_registro: new Date().toISOString(),
+  }));
+
+  // Insertar Miembros (Upsert)
+  const { error: upsertMemberError } = await supabase
     .from("asistencia_actividades")
     .upsert(recordsToUpsert, { onConflict: "actividad_id, miembro_id" });
 
-  if (error) {
-    return { success: false, message: `Error al guardar: ${error.message}` };
+  if (upsertMemberError) {
+    return {
+      success: false,
+      message: `Error al guardar miembros: ${upsertMemberError.message}`,
+    };
+  }
+
+  // Insertar Visitantes (Bulk Insert)
+  if (visitantesToInsert.length > 0) {
+    const { error: insertVisitorError } = await supabase
+      .from("asistencia_actividades")
+      .insert(visitantesToInsert as any);
+
+    if (insertVisitorError) {
+      return {
+        success: false,
+        message: `Error al guardar visitantes: ${insertVisitorError.message}`,
+      };
+    }
   }
 
   revalidatePath(`/actividades/${actividad_id}/asistencia`);
