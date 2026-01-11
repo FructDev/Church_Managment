@@ -5,25 +5,28 @@ import { checkPermission } from "@/lib/auth/guards";
 import { ROLES_FINANCIEROS } from "@/lib/auth/roles";
 import { createClient } from "@/lib/supabase/server";
 
-const getMonthBounds = () => {
-  const today = new Date();
-  const startDate = new Date(
-    today.getFullYear(),
-    today.getMonth(),
-    1
-  ).toISOString();
-  const endDate = new Date(
-    today.getFullYear(),
-    today.getMonth() + 1,
-    0
-  ).toISOString();
+const getMonthBounds = (month?: string, year?: string) => {
+  const now = new Date();
+  const targetYear = year ? parseInt(year) : now.getFullYear();
+  const targetMonth = month ? parseInt(month) : now.getMonth();
+
+  const startDate = new Date(targetYear, targetMonth, 1).toISOString();
+  // El día 0 del siguiente mes es el último día del mes actual
+  const endDate = new Date(targetYear, targetMonth + 1, 0).toISOString();
+
   return { startDate, endDate };
 };
 
-export async function getFinanzasSummary() {
+export async function getFinanzasSummary({
+  month,
+  year,
+}: {
+  month?: string;
+  year?: string;
+} = {}) {
   await checkPermission(ROLES_FINANCIEROS);
   const supabase = await createClient();
-  const { startDate, endDate } = getMonthBounds();
+  const { startDate, endDate } = getMonthBounds(month, year);
 
   // 1. Obtener Transacciones con su Categoría
   const { data: transacciones, error: transError } = await supabase

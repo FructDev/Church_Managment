@@ -136,6 +136,9 @@ export async function getDatosInformeMensual(
       )?.toLowerCase() || "";
 
     if (t.tipo === "ingreso") {
+      if (catNombre.includes("diezmo")) {
+        return;
+      }
       if (catNombre.includes("regular") || catNombre.includes("general"))
         datos.ingresos.ofrendas_regulares += monto;
       else if (catNombre.includes("escuela") || catNombre.includes("biblica"))

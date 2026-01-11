@@ -238,7 +238,7 @@ export const InformeMensualPDF = ({ data }: { data: DatosInformeMensual }) => {
             <Text style={styles.metaLabel}>Iglesia:</Text>
             {/* Usamos el nombre corto o 'Central' si no está definido */}
             <View style={styles.metaValue}>
-              <Text style={styles.metaValueText}>Central</Text>
+              <Text style={styles.metaValueText}>Fuente de Salvación Misionera, Inc. San Cristobal</Text>
             </View>
           </View>
           <View style={[styles.metaRow, { width: "30%" }]}>
@@ -251,7 +251,7 @@ export const InformeMensualPDF = ({ data }: { data: DatosInformeMensual }) => {
         <View style={styles.metaRow}>
           <Text style={styles.metaLabel}>Pastor:</Text>
           <View style={styles.metaValue}>
-            <Text style={styles.metaValueText}> </Text>
+            <Text style={styles.metaValueText}>Mercedes Hidalgo </Text>
           </View>
         </View>
 

@@ -20,7 +20,7 @@ import {
   Wallet, // Icono para Presupuestos
 } from "lucide-react";
 import Link from "next/link";
-
+import { FinanzasFilter } from "@/components/finanzas/FinanzasFilter";
 const formatCurrency = (amount: number) => {
   return new Intl.NumberFormat("es-DO", {
     style: "currency",
@@ -105,8 +105,13 @@ const financeModules = [
 
 import { ROLES_FINANCIEROS } from "@/lib/auth/roles";
 
-export default async function FinanzasHubPage() {
+export default async function FinanzasHubPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>
+}) {
   const { profile } = await getSessionInfo();
+  const { month, year } = await searchParams as { month?: string; year?: string };
   // ...
 
   const canManage = ROLES_FINANCIEROS.includes(profile?.rol as any);
@@ -115,10 +120,12 @@ export default async function FinanzasHubPage() {
     return <div className="w-full text-center p-10">Acceso Denegado.</div>;
   }
 
-  const summary = await getFinanzasSummary();
+  const summary = await getFinanzasSummary({ month, year });
 
   return (
     <div className="w-full space-y-8">
+      <FinanzasFilter />
+
       {/* SECCIÓN 1: BALANCE OPERATIVO (Real) */}
       <div>
         <h2 className="text-xl font-semibold mb-4">

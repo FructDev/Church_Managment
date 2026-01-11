@@ -13,6 +13,7 @@ import {
   FileBarChart,
   Settings,
   Church,
+  UserPlus,
 } from "lucide-react";
 import {
   Tooltip,
@@ -47,6 +48,12 @@ const mainNavLinks = [
     roles: ROLES_ADMINISTRATIVOS, // Pastor, Co-Pastor, Admin, Secretarios
   },
   {
+    href: "/ministerio/consolidacion",
+    label: "Consolidación",
+    icon: UserPlus,
+    roles: ROLES_ADMINISTRATIVOS,
+  },
+  {
     href: "/estructura",
     label: "Estructura",
     icon: Network,
@@ -78,11 +85,10 @@ const NavLink = ({ href, label, icon: Icon, isActive }: any) => {
       <TooltipTrigger asChild>
         <Link
           href={href}
-          className={`flex h-10 w-10 items-center justify-center rounded-lg transition-all duration-200 ${
-            isActive
-              ? "bg-primary text-primary-foreground shadow-md hover:bg-primary/90"
-              : "text-muted-foreground hover:text-foreground hover:bg-muted"
-          }`}
+          className={`flex h-10 w-10 items-center justify-center rounded-lg transition-all duration-200 ${isActive
+            ? "bg-primary text-primary-foreground shadow-md hover:bg-primary/90"
+            : "text-muted-foreground hover:text-foreground hover:bg-muted"
+            }`}
         >
           <Icon className="h-5 w-5" />
           <span className="sr-only">{label}</span>
